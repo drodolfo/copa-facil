@@ -84,11 +84,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
-    if (error) throw error
+    console.log('Attempting to sign in...')
+    setLoading(true)
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+    if (error) {
+      console.error('Sign in error:', error)
+      setLoading(false)
+      throw error
+    }
+    console.log('Sign in successful:', data)
+
+    if (data.user) {
+      const profile = await loadUserProfile(data.user)
+      setUser(profile)
+    }
+
+    setLoading(false)
+    return data
   }
 
   const signUp = async (email: string, password: string, fullName: string, phone: string) => {
+    console.log('Attempting to sign up...')
+    setLoading(true)
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -97,10 +114,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           full_name: fullName,
           phone: phone,
         },
+        emailRedirectTo: `${window.location.origin}/dashboard`,
       },
     })
 
-    if (error) throw error
+    if (error) {
+      console.error('Sign up error:', error)
+      setLoading(false)
+      throw error
+    }
+
+    console.log('Sign up successful:', data)
 
     if (data.user) {
       const { error: profileError } = await supabase.from('users').insert([{
@@ -110,8 +134,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         phone: phone,
         role: 'user',
       }])
-      if (profileError) throw profileError
+      if (profileError) {
+        console.error('Profile creation error:', profileError)
+        setLoading(false)
+        throw profileError
+      }
     }
+
+    setLoading(false)
+    return data
   }
 
   const signOut = async () => {

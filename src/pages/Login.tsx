@@ -17,9 +17,20 @@ export default function Login() {
     setLoading(true)
 
     try {
-      await signIn(email, password)
-      navigate('/dashboard')
+      console.log('Attempting login with email:', email)
+      const result = await signIn(email, password)
+      console.log('Login result:', result)
+
+      if (result.session) {
+        console.log('Session established, redirecting to dashboard...')
+        setTimeout(() => {
+          navigate('/dashboard')
+        }, 500)
+      } else {
+        throw new Error('No se pudo establecer la sesión')
+      }
     } catch (err: any) {
+      console.error('Login error:', err)
       setError(err.message || 'Error al iniciar sesión')
     } finally {
       setLoading(false)
