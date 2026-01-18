@@ -46,6 +46,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           ...authUser,
           profile: profile as UserProfile,
         }
+      } else {
+        console.log('Profile not found, attempting to create...')
+        try {
+          const { error: insertError } = await supabase.from('users').insert([{
+            id: authUser.id,
+            email: authUser.email || '',
+            full_name: authUser.user_metadata?.full_name || 'Usuario',
+            phone: authUser.user_metadata?.phone || 'Sin teléfono',
+            role: 'user',
+          }])
+
+          if (insertError) {
+            console.error('Error creating user profile:', insertError)
+          } else {
+            console.log('Profile created successfully')
+            const { data: newProfile } = await supabase
+              .from('users')
+              .select('*')
+              .eq('id', authUser.id)
+              .single()
+            return newProfile ? {
+              ...authUser,
+              profile: newProfile as UserProfile,
+            } : null
+          }
+        } catch (error) {
+          console.error('Error creating missing profile:', error)
+        }
       }
     } catch (error) {
       console.error('Error loading user profile:', error)
