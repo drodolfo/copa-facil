@@ -5,10 +5,26 @@ Aplicación web completa para gestionar torneos de fútbol con React, Tailwind C
 ## Tecnologías
 
 - **Frontend**: React 18 + TypeScript + Vite
-- **Estilos**: Tailwind CSS
+- **Estilos**: Tailwind CSS v3.4
 - **Base de Datos**: Supabase (PostgreSQL)
 - **Enrutamiento**: React Router v6
 - **Autenticación**: Supabase Auth
+- **Despliegue**: Vercel
+
+## 🚀 Despliegue Rápido
+
+### Producción en Vercel
+
+Para desplegar la aplicación en producción, sigue la [Guía de Despliegue](DEPLOYMENT.md) o la [Guía Rápida](QUICK_START.md).
+
+**Resumen rápido:**
+1. Sube el código a GitHub
+2. Conecta el repositorio con Vercel
+3. Configura las variables de entorno (`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`)
+4. ¡Despliega!
+
+### URL de Producción
+Una vez desplegado, tu aplicación estará disponible en una URL como: `https://copa-facil.vercel.app`
 
 ## Características
 
