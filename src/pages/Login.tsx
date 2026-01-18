@@ -18,7 +18,7 @@ export default function Login() {
 
     try {
       console.log('Attempting login with email:', email)
-      const result = await signIn(email, password)
+      const result = await signIn(email, password) as { user: any; session: any }
       console.log('Login result:', result)
 
       if (result.session) {

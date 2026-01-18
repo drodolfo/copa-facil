@@ -19,8 +19,8 @@ interface AuthContextType {
   user: ExtendedUser | null
   session: Session | null
   loading: boolean
-  signIn: (email: string, password: string) => Promise<void>
-  signUp: (email: string, password: string, fullName: string, phone: string) => Promise<void>
+  signIn: (email: string, password: string) => Promise<{ user: User; session: Session }>
+  signUp: (email: string, password: string, fullName: string, phone: string) => Promise<{ user: User | null; session: Session | null }>
   signOut: () => Promise<void>
 }
 
@@ -83,7 +83,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => subscription.unsubscribe()
   }, [])
 
-  const signIn = async (email: string, password: string) => {
+  const signIn = async (email: string, password: string): Promise<{ user: User; session: Session }> => {
     console.log('Attempting to sign in...')
     setLoading(true)
     const { data, error } = await supabase.auth.signInWithPassword({ email, password })
@@ -100,7 +100,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     setLoading(false)
-    return data
+    return { user: data.user, session: data.session }
   }
 
   const signUp = async (email: string, password: string, fullName: string, phone: string) => {
@@ -125,21 +125,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     console.log('Sign up successful:', data)
-
-    if (data.user) {
-      const { error: profileError } = await supabase.from('users').insert([{
-        id: data.user.id,
-        email: data.user.email,
-        full_name: fullName,
-        phone: phone,
-        role: 'user',
-      }])
-      if (profileError) {
-        console.error('Profile creation error:', profileError)
-        setLoading(false)
-        throw profileError
-      }
-    }
+    console.log('Profile will be created automatically by trigger')
 
     setLoading(false)
     return data

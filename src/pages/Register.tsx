@@ -24,7 +24,7 @@ export default function Register() {
 
     try {
       console.log('Submitting registration...')
-      const result = await signUp(formData.email, formData.password, formData.fullName, formData.phone)
+      const result = await signUp(formData.email, formData.password, formData.fullName, formData.phone) as { user: any; session: any }
       console.log('Registration result:', result)
 
       if (result.user?.email_confirmed_at) {
