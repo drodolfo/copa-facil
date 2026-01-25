@@ -56,41 +56,53 @@ export async function getAllMatchesWithTeams(tournamentId: string): Promise<Matc
 export async function getCompletedMatches(tournamentId: string): Promise<MatchWithTeams[]> {
   console.log('getCompletedMatches called with tournamentId:', tournamentId)
 
-  // First, let's check if there are any matches at all
-  const { data: allMatches, error: allMatchesError } = await supabase
-    .from('matches')
-    .select('*')
-    .eq('tournament_id', tournamentId)
+  try {
+    // Try to get matches with status 'completed' first
+    const { data, error } = await supabase
+      .from('matches')
+      .select(`
+        *,
+        home_team:teams!matches_home_team_id_fkey(*),
+        away_team:teams!matches_away_team_id_fkey(*)
+      `)
+      .eq('tournament_id', tournamentId)
+      .eq('status', 'completed')
+      .order('match_date', { ascending: false })
 
-  console.log('All matches for tournament:', allMatches)
-  console.log('All matches error:', allMatchesError)
+    if (error) {
+      console.error('getCompletedMatches error:', error)
+      throw error
+    }
 
-  // Check matches by status
-  const { data: completedMatches } = await supabase
-    .from('matches')
-    .select('status')
-    .eq('tournament_id', tournamentId)
+    console.log('getCompletedMatches success:', data)
+    return data || []
+  } catch (error) {
+    console.error('Error in getCompletedMatches:', error)
+    // Fallback: try to get any matches with scores
+    try {
+      const { data: fallbackData, error: fallbackError } = await supabase
+        .from('matches')
+        .select(`
+          *,
+          home_team:teams!matches_home_team_id_fkey(*),
+          away_team:teams!matches_away_team_id_fkey(*)
+        `)
+        .eq('tournament_id', tournamentId)
+        .not('home_score', 'is', null)
+        .not('away_score', 'is', null)
+        .order('match_date', { ascending: false })
 
-  console.log('Match statuses:', completedMatches)
+      if (fallbackError) {
+        throw fallbackError
+      }
 
-  // Now check for completed matches with team relations
-  const { data, error } = await supabase
-    .from('matches')
-    .select(`
-      *,
-      home_team:teams!matches_home_team_id_fkey(*),
-      away_team:teams!matches_away_team_id_fkey(*)
-    `)
-    .eq('tournament_id', tournamentId)
-    .eq('status', 'completed')
-    .order('match_date', { ascending: false })
-
-  if (error) {
-    console.error('getCompletedMatches error:', error)
-    throw error
+      console.log('getCompletedMatches fallback success:', fallbackData)
+      return fallbackData || []
+    } catch (fallbackError) {
+      console.error('Both primary and fallback queries failed:', fallbackError)
+      throw fallbackError
+    }
   }
-  console.log('getCompletedMatches success:', data)
-  return data || []
 }
 
 export async function getMatchById(id: string): Promise<Match | null> {

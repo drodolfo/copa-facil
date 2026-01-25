@@ -122,11 +122,20 @@ export default function Dashboard() {
       let resultsData = await getCompletedMatches(tournamentId)
       console.log('Completed matches result:', resultsData)
       
-      // If no completed matches, try to get all matches
+      // If no completed matches, try to get all matches that have scores
       if (resultsData.length === 0) {
-        console.log('--- No completed matches found, trying all matches ---')
+        console.log('--- No completed matches found, trying matches with scores ---')
         resultsData = await getAllMatchesWithTeams(tournamentId)
         console.log('All matches result:', resultsData)
+        
+        // Filter matches that have scores (not null)
+        resultsData = resultsData.filter(match => 
+          match.home_score !== null && 
+          match.away_score !== null && 
+          match.home_score !== undefined && 
+          match.away_score !== undefined
+        )
+        console.log('Filtered matches with scores:', resultsData)
       }
       
       console.log('Final results data length:', resultsData.length)

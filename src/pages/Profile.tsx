@@ -18,6 +18,7 @@ export default function Profile() {
           email: user.email || '',
           full_name: user.user_metadata?.full_name || '',
           phone: user.user_metadata?.phone || '',
+          team_name: user.user_metadata?.team_name || '',
           role: 'user',
           created_at: user.created_at || '',
         })
