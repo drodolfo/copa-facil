@@ -1,7 +1,8 @@
 import { supabase } from '../lib/supabase'
-import type { Standing } from '../types'
+import type { Standing, Team } from '../types'
 
 export async function getStandings(tournamentId: string): Promise<Standing[]> {
+  console.log('getStandings called for tournament:', tournamentId)
   const { data, error } = await supabase
     .from('standings')
     .select('*')
@@ -9,11 +10,17 @@ export async function getStandings(tournamentId: string): Promise<Standing[]> {
     .order('points', { ascending: false })
     .order('goal_difference', { ascending: false })
 
-  if (error) throw error
+  if (error) {
+    console.error('Error in getStandings:', error)
+    throw error
+  }
+  console.log('Standings data from DB:', data)
   return data || []
 }
 
 export async function updateStandings(tournamentId: string): Promise<void> {
+  console.log('updateStandings called for tournament:', tournamentId)
+
   const { data: matches, error: matchesError } = await supabase
     .from('matches')
     .select('*')
@@ -21,6 +28,21 @@ export async function updateStandings(tournamentId: string): Promise<void> {
     .eq('status', 'completed')
 
   if (matchesError) throw matchesError
+  console.log('Completed matches found:', matches?.length || 0)
+
+  const { data: teams, error: teamsError } = await supabase
+    .from('teams')
+    .select('*')
+    .eq('tournament_id', tournamentId)
+
+  if (teamsError) throw teamsError
+  console.log('Teams found:', teams?.length || 0)
+
+  const teamMap = new Map<string, string>()
+  teams?.forEach((team: Team) => {
+    teamMap.set(team.id, team.name)
+    console.log(`Team map: ${team.id} -> ${team.name}`)
+  })
 
   const teamStats = new Map<string, Standing>()
 
@@ -28,11 +50,17 @@ export async function updateStandings(tournamentId: string): Promise<void> {
     const homeKey = match.home_team_id
     const awayKey = match.away_team_id
 
+    const homeTeamName = teamMap.get(homeKey)
+    const awayTeamName = teamMap.get(awayKey)
+
+    console.log(`Processing match: ${homeTeamName} vs ${awayTeamName}`)
+
     if (!teamStats.has(homeKey)) {
-      const team = { data: { name: 'Team' } }
+      const teamName = teamMap.get(homeKey) || 'Equipo desconocido'
+      console.log(`Creating stats for home team: ${teamName}`)
       teamStats.set(homeKey, {
         team_id: homeKey,
-        team_name: team.data.name,
+        team_name: teamName,
         played: 0,
         won: 0,
         drawn: 0,
@@ -45,10 +73,11 @@ export async function updateStandings(tournamentId: string): Promise<void> {
     }
 
     if (!teamStats.has(awayKey)) {
-      const team = { data: { name: 'Team' } }
+      const teamName = teamMap.get(awayKey) || 'Equipo desconocido'
+      console.log(`Creating stats for away team: ${teamName}`)
       teamStats.set(awayKey, {
         team_id: awayKey,
-        team_name: team.data.name,
+        team_name: teamName,
         played: 0,
         won: 0,
         drawn: 0,
@@ -94,6 +123,7 @@ export async function updateStandings(tournamentId: string): Promise<void> {
   })
 
   const standings = Array.from(teamStats.values())
+  console.log('Final standings:', standings)
 
   await supabase
     .from('standings')
@@ -108,4 +138,6 @@ export async function updateStandings(tournamentId: string): Promise<void> {
         tournament_id: tournamentId,
       }])
   }
+
+  console.log('Standings updated successfully')
 }

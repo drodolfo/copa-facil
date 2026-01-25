@@ -3,6 +3,7 @@ export interface User {
   email: string
   full_name: string
   phone: string
+  team_name: string
   role: 'user' | 'admin'
   created_at: string
 }
@@ -56,6 +57,7 @@ export interface Standing {
   goals_against: number
   goal_difference: number
   points: number
+  tournament_id?: string
 }
 
 export interface KnockoutRound {

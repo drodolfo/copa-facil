@@ -1,27 +1,41 @@
 import { Link } from 'react-router-dom'
 import Layout from '../components/Layout'
+import { useAuth } from '../context/AuthContext'
 
 export default function Home() {
+  const { user } = useAuth()
+
   return (
     <Layout>
       <div className="py-20 bg-gradient-to-r from-green-800 to-green-600">
         <div className="max-w-7xl mx-auto px-4 text-center text-white">
           <h1 className="text-6xl font-bold mb-6">⚽ Copa Fácil</h1>
           <p className="text-2xl mb-8">Sistema de Gestión de Torneos de Fútbol</p>
-          <div className="flex gap-4 justify-center">
-            <Link
-              to="/register"
-              className="px-8 py-4 bg-white text-green-800 rounded-lg font-bold text-lg hover:bg-gray-100 transition"
-            >
-              Registrarse
-            </Link>
-            <Link
-              to="/login"
-              className="px-8 py-4 border-2 border-white rounded-lg font-bold text-lg hover:bg-white hover:text-green-800 transition"
-            >
-              Iniciar Sesión
-            </Link>
-          </div>
+          {!user ? (
+            <div className="flex gap-4 justify-center">
+              <Link
+                to="/register"
+                className="px-8 py-4 bg-white text-green-800 rounded-lg font-bold text-lg hover:bg-gray-100 transition"
+              >
+                Registrarse
+              </Link>
+              <Link
+                to="/login"
+                className="px-8 py-4 border-2 border-white rounded-lg font-bold text-lg hover:bg-white hover:text-green-800 transition"
+              >
+                Iniciar Sesión
+              </Link>
+            </div>
+          ) : (
+            <div className="flex gap-4 justify-center">
+              <Link
+                to="/dashboard"
+                className="px-8 py-4 bg-white text-green-800 rounded-lg font-bold text-lg hover:bg-gray-100 transition"
+              >
+                Ir al Dashboard
+              </Link>
+            </div>
+          )}
         </div>
       </div>
 

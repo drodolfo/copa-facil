@@ -9,6 +9,7 @@ export default function Register() {
     password: '',
     fullName: '',
     phone: '',
+    teamName: '',
   })
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
@@ -24,19 +25,20 @@ export default function Register() {
 
     try {
       console.log('Submitting registration...')
-      const result = await signUp(formData.email, formData.password, formData.fullName, formData.phone) as { user: any; session: any }
+      const result = await signUp(formData.email, formData.password, formData.fullName, formData.phone, formData.teamName)
       console.log('Registration result:', result)
 
-      if (result.user?.email_confirmed_at) {
+      if (result && result.user?.email_confirmed_at) {
         console.log('Email already confirmed, redirecting to dashboard...')
         navigate('/dashboard')
       } else {
         console.log('Email confirmation required')
         setSuccess(true)
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Registration error:', err)
-      setError(err.message || 'Error al registrar')
+      const errorMessage = err instanceof Error ? err.message : 'Error al registrar'
+      setError(errorMessage)
     } finally {
       setLoading(false)
     }
@@ -107,6 +109,18 @@ export default function Register() {
                   type="tel"
                   name="phone"
                   value={formData.phone}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-600"
+                  required
+                />
+              </div>
+
+              <div className="mb-4">
+                <label className="block text-gray-700 mb-2">Nombre del Equipo</label>
+                <input
+                  type="text"
+                  name="teamName"
+                  value={formData.teamName}
                   onChange={handleChange}
                   className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-600"
                   required

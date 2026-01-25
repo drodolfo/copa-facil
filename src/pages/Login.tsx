@@ -1,39 +1,48 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import Layout from '../components/Layout'
 
 export default function Login() {
+  console.log('Login component rendered')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
-  const [loading, setLoading] = useState(false)
-  const { signIn } = useAuth()
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const { signIn, user } = useAuth()
   const navigate = useNavigate()
 
+  useEffect(() => {
+    console.log('Login: useEffect triggered, user:', user)
+    if (user) {
+      console.log('Login: User exists, redirecting to dashboard')
+      navigate('/dashboard')
+    }
+  }, [user, navigate])
+
   const handleSubmit = async (e: React.FormEvent) => {
+    console.log('handleSubmit called')
     e.preventDefault()
     setError('')
-    setLoading(true)
+    setIsSubmitting(true)
 
     try {
       console.log('Attempting login with email:', email)
-      const result = await signIn(email, password) as { user: any; session: any }
+      const result = await signIn(email, password)
       console.log('Login result:', result)
-
-      if (result.session) {
-        console.log('Session established, redirecting to dashboard...')
-        setTimeout(() => {
-          navigate('/dashboard')
-        }, 500)
-      } else {
-        throw new Error('No se pudo establecer la sesión')
-      }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Login error:', err)
-      setError(err.message || 'Error al iniciar sesión')
+      let errorMessage = 'Error al iniciar sesión'
+
+      if (err instanceof Error) {
+        errorMessage = err.message
+      } else if (typeof err === 'object' && err !== null && 'message' in err) {
+        errorMessage = String(err.message)
+      }
+
+      setError(errorMessage)
     } finally {
-      setLoading(false)
+      setIsSubmitting(false)
     }
   }
 
@@ -72,10 +81,10 @@ export default function Login() {
 
             <button
               type="submit"
-              disabled={loading}
+              disabled={isSubmitting}
               className="w-full bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 transition disabled:bg-gray-400"
             >
-              {loading ? 'Iniciando...' : 'Iniciar Sesión'}
+              {isSubmitting ? 'Iniciando...' : 'Iniciar Sesión'}
             </button>
           </form>
 

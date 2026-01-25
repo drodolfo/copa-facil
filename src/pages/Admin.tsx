@@ -3,27 +3,22 @@ import { useAuth } from '../context/AuthContext'
 import { useNavigate } from 'react-router-dom'
 import Layout from '../components/Layout'
 import { getAllTournaments, createTournament } from '../services/tournamentService'
-import { getMatchesByTournament, createMatch, updateMatch } from '../services/matchService'
+import { getMatchesWithTeamsByTournament, createMatch, updateMatch } from '../services/matchService'
 import { getTeamsByTournament, createTeam, deleteTeam } from '../services/teamService'
+import { getAllUsers } from '../services/userService'
 import { updateStandings } from '../services/standingsService'
-import type { Tournament, Match, Team } from '../types'
+import type { Tournament, Team, User } from '../types'
+import type { MatchWithTeams } from '../services/matchService'
 
 export default function AdminDashboard() {
   const { user } = useAuth()
   const navigate = useNavigate()
-  const [activeTab, setActiveTab] = useState<'tournaments' | 'matches' | 'teams' | 'knockout'>('tournaments')
+  const [activeTab, setActiveTab] = useState<'tournaments' | 'matches' | 'teams'>('tournaments')
   const [tournaments, setTournaments] = useState<Tournament[]>([])
   const [selectedTournament, setSelectedTournament] = useState<string>('')
-  const [matches, setMatches] = useState<Match[]>([])
+  const [matches, setMatches] = useState<MatchWithTeams[]>([])
   const [teams, setTeams] = useState<Team[]>([])
-
-  useEffect(() => {
-    if (user?.profile?.role !== 'admin') {
-      navigate('/dashboard')
-      return
-    }
-    loadTournaments()
-  }, [user, navigate])
+  const [users, setUsers] = useState<User[]>([])
 
   const loadTournaments = async () => {
     try {
@@ -34,9 +29,18 @@ export default function AdminDashboard() {
     }
   }
 
+  const loadUsers = async () => {
+    try {
+      const data = await getAllUsers()
+      setUsers(data)
+    } catch (error) {
+      console.error('Error loading users:', error)
+    }
+  }
+
   const loadMatches = async (tournamentId: string) => {
     try {
-      const data = await getMatchesByTournament(tournamentId)
+      const data = await getMatchesWithTeamsByTournament(tournamentId)
       setMatches(data)
     } catch (error) {
       console.error('Error loading matches:', error)
@@ -51,6 +55,22 @@ export default function AdminDashboard() {
       console.error('Error loading teams:', error)
     }
   }
+
+  useEffect(() => {
+    if (selectedTournament) {
+      loadMatches(selectedTournament)
+      loadTeams(selectedTournament)
+    }
+  }, [selectedTournament])
+
+  useEffect(() => {
+    if (user?.profile?.role !== 'admin') {
+      navigate('/dashboard')
+      return
+    }
+    loadTournaments()
+    loadUsers()
+  }, [user, navigate])
 
   const handleCreateTournament = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -82,7 +102,7 @@ export default function AdminDashboard() {
       home_score: null,
       away_score: null,
       match_date: formData.get('match_date') as string,
-      venue: formData.get('venue') as string,
+      venue: '',
       status: 'scheduled' as const,
       round: formData.get('round') as string,
     }
@@ -109,23 +129,6 @@ export default function AdminDashboard() {
     }
   }
 
-  const handleCreateTeam = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
-    const formData = new FormData(e.currentTarget)
-    const team = {
-      name: formData.get('name') as string,
-      captain_id: formData.get('captain_id') as string,
-      tournament_id: selectedTournament,
-    }
-    try {
-      await createTeam(team)
-      loadTeams(selectedTournament)
-      e.currentTarget.reset()
-    } catch (error) {
-      console.error('Error creating team:', error)
-    }
-  }
-
   return (
     <Layout>
       <div className="max-w-7xl mx-auto px-4 py-8">
@@ -135,43 +138,33 @@ export default function AdminDashboard() {
           <nav className="flex space-x-8">
             <button
               onClick={() => setActiveTab('tournaments')}
-              className={`py-4 px-1 border-b-2 font-medium ${
-                activeTab === 'tournaments'
-                  ? 'border-green-600 text-green-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700'
-              }`}
+              className={`py-4 px-1 border-b-2 font-medium ${activeTab === 'tournaments'
+                ? 'border-green-600 text-green-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700'
+                }`}
             >
               Torneos
             </button>
             <button
-              onClick={() => setActiveTab('teams')}
-              className={`py-4 px-1 border-b-2 font-medium ${
-                activeTab === 'teams'
-                  ? 'border-green-600 text-green-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700'
-              }`}
+              onClick={() => {
+                setActiveTab('teams')
+                loadUsers()
+              }}
+              className={`py-4 px-1 border-b-2 font-medium ${activeTab === 'teams'
+                ? 'border-green-600 text-green-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700'
+                }`}
             >
               Equipos
             </button>
             <button
               onClick={() => setActiveTab('matches')}
-              className={`py-4 px-1 border-b-2 font-medium ${
-                activeTab === 'matches'
-                  ? 'border-green-600 text-green-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700'
-              }`}
+              className={`py-4 px-1 border-b-2 font-medium ${activeTab === 'matches'
+                ? 'border-green-600 text-green-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700'
+                }`}
             >
               Partidos
-            </button>
-            <button
-              onClick={() => setActiveTab('knockout')}
-              className={`py-4 px-1 border-b-2 font-medium ${
-                activeTab === 'knockout'
-                  ? 'border-green-600 text-green-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700'
-              }`}
-            >
-              Eliminatorias
             </button>
           </nav>
         </div>
@@ -267,7 +260,6 @@ export default function AdminDashboard() {
                 value={selectedTournament}
                 onChange={(e) => {
                   setSelectedTournament(e.target.value)
-                  loadTeams(e.target.value)
                 }}
                 className="w-full md:w-1/3 px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-600"
               >
@@ -281,34 +273,42 @@ export default function AdminDashboard() {
             </div>
 
             <div className="bg-white rounded-lg shadow-md p-6">
-              <h2 className="text-xl font-semibold mb-4">Crear Equipo</h2>
-              <form onSubmit={handleCreateTeam} className="space-y-4">
-                <div>
-                  <label className="block text-gray-700 mb-2">Nombre del Equipo</label>
-                  <input
-                    type="text"
-                    name="name"
-                    className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-600"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-gray-700 mb-2">ID del Capitán</label>
-                  <input
-                    type="text"
-                    name="captain_id"
-                    className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-600"
-                    required
-                  />
-                </div>
-                <button
-                  type="submit"
-                  disabled={!selectedTournament}
-                  className="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 transition disabled:bg-gray-400"
-                >
-                  Crear Equipo
-                </button>
-              </form>
+              <h2 className="text-xl font-semibold mb-4">Asociar Equipos de Usuarios</h2>
+              <p className="text-gray-600 mb-4">Selecciona los equipos registrados por usuarios para agregarlos al torneo:</p>
+              <div className="space-y-3">
+                {users.filter(u => u.team_name && u.team_name !== 'Sin equipo').map((user) => {
+                  const isTeamInTournament = teams.some(t => t.captain_id === user.id && t.tournament_id === selectedTournament)
+                  return (
+                    <div key={user.id} className="flex items-center justify-between p-3 border rounded-lg">
+                      <div>
+                        <p className="font-semibold">{user.team_name}</p>
+                        <p className="text-sm text-gray-600">Capitán: {user.full_name} ({user.email})</p>
+                      </div>
+                      {!isTeamInTournament ? (
+                        <button
+                          onClick={() => {
+                            const team = {
+                              name: user.team_name,
+                              captain_id: user.id,
+                              tournament_id: selectedTournament,
+                            }
+                            createTeam(team).then(() => loadTeams(selectedTournament))
+                          }}
+                          disabled={!selectedTournament}
+                          className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition disabled:bg-gray-400 text-sm"
+                        >
+                          Agregar al Torneo
+                        </button>
+                      ) : (
+                        <span className="text-green-600 text-sm font-medium">Ya está en el torneo</span>
+                      )}
+                    </div>
+                  )
+                })}
+                {users.filter(u => u.team_name && u.team_name !== 'Sin equipo').length === 0 && (
+                  <p className="text-gray-500">No hay equipos registrados por usuarios</p>
+                )}
+              </div>
             </div>
 
             <div className="bg-white rounded-lg shadow-md p-6">
@@ -349,7 +349,6 @@ export default function AdminDashboard() {
                 value={selectedTournament}
                 onChange={(e) => {
                   setSelectedTournament(e.target.value)
-                  loadMatches(e.target.value)
                 }}
                 className="w-full md:w-1/3 px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-600"
               >
@@ -397,25 +396,14 @@ export default function AdminDashboard() {
                     </select>
                   </div>
                 </div>
-                <div className="grid md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-gray-700 mb-2">Fecha del Partido</label>
-                    <input
-                      type="datetime-local"
-                      name="match_date"
-                      className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-600"
-                      required
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-gray-700 mb-2">Sede</label>
-                    <input
-                      type="text"
-                      name="venue"
-                      className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-600"
-                      required
-                    />
-                  </div>
+                <div>
+                  <label className="block text-gray-700 mb-2">Fecha del Partido</label>
+                  <input
+                    type="datetime-local"
+                    name="match_date"
+                    className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-green-600"
+                    required
+                  />
                 </div>
                 <div>
                   <label className="block text-gray-700 mb-2">Ronda</label>
@@ -444,13 +432,11 @@ export default function AdminDashboard() {
               ) : (
                 <div className="space-y-4">
                   {matches.map((match) => {
-                    const homeTeam = teams.find(t => t.id === match.home_team_id)
-                    const awayTeam = teams.find(t => t.id === match.away_team_id)
                     return (
                       <div key={match.id} className="border rounded-lg p-4">
                         <div className="flex justify-between items-center">
                           <div className="flex-1">
-                            <p className="font-semibold">{homeTeam?.name || 'Equipo Local'}</p>
+                            <p className="font-semibold">{match.home_team.name}</p>
                           </div>
                           <div className="px-4">
                             {match.status === 'completed' ? (
@@ -462,15 +448,13 @@ export default function AdminDashboard() {
                             )}
                           </div>
                           <div className="flex-1 text-right">
-                            <p className="font-semibold">{awayTeam?.name || 'Equipo Visitante'}</p>
+                            <p className="font-semibold">{match.away_team.name}</p>
                           </div>
                         </div>
                         <div className="mt-2 text-sm text-gray-500 flex justify-between">
                           <span>{new Date(match.match_date).toLocaleString()}</span>
-                          <span>{match.venue}</span>
-                          <span className={`px-2 py-1 rounded ${
-                            match.status === 'completed' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
-                          }`}>
+                          <span className={`px-2 py-1 rounded ${match.status === 'completed' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+                            }`}>
                             {match.status}
                           </span>
                         </div>
@@ -506,16 +490,6 @@ export default function AdminDashboard() {
                 </div>
               )}
             </div>
-          </div>
-        )}
-
-        {activeTab === 'knockout' && (
-          <div className="bg-white rounded-lg shadow-md p-6">
-            <h2 className="text-xl font-semibold mb-4">Eliminatorias</h2>
-            <p className="text-gray-600">Esta sección está en desarrollo.</p>
-            <p className="mt-2 text-sm text-gray-500">
-              Próximamente podrás gestionar fases eliminatorias, cruces de equipos y generar brackets automáticamente.
-            </p>
           </div>
         )}
       </div>
